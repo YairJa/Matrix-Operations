@@ -18,6 +18,7 @@ public interface RationalNumber {
     int getNumerator();
     int getDenominator();
     int getWhole();
+    RationalNumber copy();
     
    
 

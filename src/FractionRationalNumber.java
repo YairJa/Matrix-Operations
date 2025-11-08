@@ -1,6 +1,6 @@
 import java.math.*;
 
-public class FractionRationalNumber implements RationalNumber {
+public class FractionRationalNumber extends AbstractRationalNumber {
 
 	private int numerator;
     private int denominator; // positive number; 
@@ -18,7 +18,7 @@ public class FractionRationalNumber implements RationalNumber {
     }
     
 
-    
+    /*
 	public RationalNumber divide(RationalNumber other){ 
 		if(other.isZero()) {
 			return new FractionRationalNumber(0,1);
@@ -31,6 +31,7 @@ public class FractionRationalNumber implements RationalNumber {
 		}
 		return new FractionRationalNumber(newN,newD);
 	}
+	
 	
 	public RationalNumber add(RationalNumber other) {
 		int newD=this.denominator*other.getDenominator();
@@ -49,10 +50,32 @@ public class FractionRationalNumber implements RationalNumber {
 		return new FractionRationalNumber(newN,newD);	
 	}
 	
+	
 	public RationalNumber multiply(RationalNumber other) {
 		int newN= this.numerator*other.getNumerator();
 		int newD= this.denominator*other.getDenominator();
 		return new FractionRationalNumber(newN,newD);
+	}
+	*/
+	
+	public RationalNumber divide(RationalNumber other){ 
+		int [] arr = absDivide(this.numerator,this.denominator,other.getNumerator(),other.getDenominator());
+		return new FractionRationalNumber(arr[0],arr[1]);
+	}
+    
+	public RationalNumber add(RationalNumber other) {
+		int [] arr = absAdd(this.numerator,this.denominator,other.getNumerator(),other.getDenominator());
+		return new FractionRationalNumber(arr[0],arr[1]);
+	}
+	
+	public RationalNumber subtract(RationalNumber other) {
+		int [] arr = absSubtract(this.numerator,this.denominator,other.getNumerator(),other.getDenominator());
+		return new FractionRationalNumber(arr[0],arr[1]);
+	}
+	
+	public RationalNumber multiply(RationalNumber other) {
+		int [] arr = absMultiply(this.numerator,this.denominator,other.getNumerator(),other.getDenominator());
+		return new FractionRationalNumber(arr[0],arr[1]);
 	}
 	
     public boolean isZero() {
@@ -70,6 +93,12 @@ public class FractionRationalNumber implements RationalNumber {
     public int getWhole() {
     	return this.numerator / this.denominator;
     }
+    
+    public RationalNumber copy() {
+    	return new FractionRationalNumber(this.numerator,this.denominator);
+    }
+    
+
 
 	@Override
 	public String toString() {
