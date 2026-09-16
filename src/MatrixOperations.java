@@ -50,9 +50,8 @@ public class MatrixOperations {
 	}
 	
 	public static void matrixRankInPlace(RationalNumber [][] mat ) { ///full matrix rank process, using all helper functions below
-		int cnt=0;
 		int curR=0; int curC = 0;int i; int j; 
-		int[] nonZeroIdx = findFirstNonZeroIdx(mat, curR, curC);
+		int[] nonZeroIdx = findFirstNonZeroIdx(mat, curR, curC,num -> num.isZero());
 		while(nonZeroIdx[0]!=-1) {
 			i =nonZeroIdx [0]; j = nonZeroIdx[1];
 			rowInterchangeInPlace(mat, curR, i);
@@ -64,47 +63,31 @@ public class MatrixOperations {
 				rowSubtractionInPlace(mat, k, curR, mat[k][j].divide(mat[curR][j]));
 			}
 			curR++;curC=j+1;
-			nonZeroIdx = findFirstNonZeroIdx(mat, curR, curC);
-			cnt++;
+			nonZeroIdx = findFirstNonZeroIdx(mat, curR, curC,num -> num.isZero());
 		}
 		
 	}
 	
 	public static RationalNumber[][] matrixRank(RationalNumber [][] mat ) { ///full matrix rank process, using all helper functions below
 		RationalNumber[][] copy = matrixCopy(mat);
-		int cnt=0;
-		int curR=0; int curC = 0;int i; int j; 
-		int[] nonZeroIdx = findFirstNonZeroIdx(copy, curR, curC);
-		while(nonZeroIdx[0]!=-1) { // rank still possible in range
-			i =nonZeroIdx [0]; j = nonZeroIdx[1];
-			rowInterchangeInPlace(copy, curR, i);
-			rowDivisionInPlace(copy, curR, copy[curR][j]);
-			for(int k=0; k<copy.length;k++) {
-				if (k==curR) {
-					continue;
-				}
-				rowSubtractionInPlace(copy, k, curR, copy[k][j].divide(copy[curR][j]));
-			}
-			curR++;curC=j+1;
-			nonZeroIdx = findFirstNonZeroIdx(copy, curR, curC);
-			cnt++;
-		}
+		matrixRankInPlace(copy);
 		return copy;
 		
 	}
 	
-	///search for nonzero value index in the minor matrix set by int parameters, search order is by column, return 2 len Array representing matrix index
-	public static int[] findFirstNonZeroIdx(RationalNumber [][] mat, int rowStartIdx, int colStartIdx) { 
-			for(int j=colStartIdx;j<mat[0].length;j++) {
-				for(int i=rowStartIdx;i<mat.length;i++) {
-				
-				if(!(mat[i][j].isZero())) {
-					return new int[] {i,j};
-				}
+	
+	public static <T> int[] findFirstNonZeroIdx(T [][] mat, int rowStart, int colStart,Predicate<T> isZero) { 
+		
+		for(int j=colStart;j<mat[0].length;j++) {
+			for(int i=rowStart;i<mat.length;i++) {
+			
+			if(!(isZero.test( mat[i][j]))) {
+				return new int[] {i,j};
 			}
 		}
-		return new int[] {-1,-1};
 	}
+	return new int[] {-1,-1};
+}
 	
 
 	///Elementary Matrix row Operation, subtract martix row by other  row multiplied by scalar
@@ -137,8 +120,8 @@ public class MatrixOperations {
 	
 
 	///Elementary Matrix row Operation, switching place of 2 rows
-	public static void rowInterchangeInPlace(RationalNumber[][] mat, int RowAIdx , int RowBIdx){ 
-		RationalNumber [] temp = mat[RowAIdx];
+	public static <T> void rowInterchangeInPlace(T[][] mat, int RowAIdx , int RowBIdx){ 
+		T [] temp = mat[RowAIdx];
 		mat[RowAIdx]=mat[RowBIdx];
 		mat[RowBIdx] = temp;
 	}
@@ -205,7 +188,8 @@ public class MatrixOperations {
 		return x.subtract(mat[1][0].multiply(mat[0][1]));
 	}
 	RationalNumberFactory factory = new FractionRationalNumberFactory();
-	int i=maxZeroRow(mat, RN -> RN.isZero()); RationalNumber sum = factory.zero();
+	int i=maxZeroRow(mat, num -> num.isZero()); 
+	RationalNumber sum = factory.zero();
 	for(int j=0;j<mat[0].length;j++) {
 		if(mat[i][j].isZero()) {
 			continue;
