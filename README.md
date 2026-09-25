@@ -1,19 +1,19 @@
-# Matrix Operations 
+# Matrix Operations
 
 A small Java library for performing matrix operations — multiplication, row reduction / rank, determinant, and elementary row operations — over any type that extends `Number`, with dedicated, exact support for rational numbers via a custom `RationalNumber` interface.
 
 ## Features
 
 - **Matrix multiplication**
-  - Generic version for any `T extends Number` (returns a `double[][]`)
+  - Generic version for any `T extends Number` (returns a `Double[][]`)
   - Exact version for `RationalNumber[][]` (returns `RationalNumber[][]`, no floating-point rounding)
 - **Determinant** (`matrixDet`)
-  - Recursive cofactor expansion, with a generic `double`-based version and an exact `RationalNumber`-based version
-  - Row/column selection is optimized to reduce the number of recursive calls (see `maxZeroRow` below)
+  - Recursive cofactor expansion, with a generic `Double`-based version and an exact `RationalNumber`-based version
+  - Row/column selection is optimized to reduce the number of recursive calls
 - **Matrix rank** (`matrixRank`, `matrixRankInPlace`)
   - Full Gaussian elimination over `RationalNumber` matrices, built entirely from the elementary row operations below
 - **Elementary row operations** (each with an in-place and a copy-returning variant)
-  - `rowInterchange` — swap two rows 
+  - `rowInterchange` — swap two rows
   - `rowDivision` — divide a row by a scalar
   - `rowSubtraction` — subtract a scaled row from another row
 - **Utility helpers**
@@ -52,19 +52,15 @@ For any other numeric wrapper type (`Integer`, `Double`, etc.), the generic over
 Integer[][] matC = { {1, 2}, {3, 4} };
 Integer[][] matD = { {5, 6}, {7, 8} };
 
-double[][] result = MatrixOperations.matrixMultiply(matC, matD);
-double det = MatrixOperations.matrixDet(matC);
+Double[][] result = MatrixOperations.matrixMultiply(matC, matD);
+Double det = MatrixOperations.matrixDet(matC);
 ```
 
 ## Design & Architecture
 
-Most operations that involve accumulating a running total — `matrixMultiply` and `matrixDet` — exist in two forms: a generic version for any `T extends Number` that works in `double`, and an exact version for `RationalNumber` that never leaves rational arithmetic. Structural helpers that don't accumulate numbers, like `minorMatrix` and `rowInterchange`, don't need this split and are written once, fully generically, for reuse by both paths. `RationalNumber` exists because the intended use case — determinants, rank, row reduction — is exactly where floating-point rounding is most likely to give a wrong answer (e.g. a near-singular matrix reading as singular, or vice versa); staying exact matters more here than raw performance.
+`matrixMultiply` and `matrixDet` work the same way logically for any numeric type — add things up, multiply things, know what zero is. `NumericOperations<T>` (`add`, `sub`, `mul`, `div`, `zero()`, `isZero()`) captures exactly that logic once, generically, instead of hardcoding arithmetic separately per type. Combined with `Function`/`BiFunction` for the handful of type-specific bits that aren't pure arithmetic (converting a value, allocating a result array), this is enough to implement each matrix operation once for *any* supported type, rather than once per type. `DoubleOperations` and `RationalNumberOperations` are the two concrete implementations (each a stateless singleton), and `RationalNumberOperations` uses a `RationalNumberFactory` to produce its zero value, since `RationalNumber` has no public zero-argument constructor of its own. Callers never deal with any of it — `matrixMultiply`/`matrixDet` simply take matrices in and return matrices out.
 
-That exactness is centralized rather than duplicated: `AbstractRationalNumber` implements all four arithmetic operations once, generically, in terms of raw numerator/denominator pairs (`absAdd`, `absSubtract`, `absMultiply`, `absDivide`). `FractionRationalNumber` and `MixedRationalNumber` both inherit this rather than reimplementing arithmetic themselves — each only handles its own representation (reducing a fraction vs. splitting off a whole part). A specific representation could in principle compute some operations more directly, but correctness lives in one place instead of being re-derived per class.
-
-Where possible, generic helpers avoid hard-coding what "zero" means: `findFirstNonZeroIdx` and `maxZeroRow` take a `Predicate<T> isZero`, so the same traversal logic works for `RationalNumber` (`num -> num.isZero()`) and any `Number` (`n -> n.doubleValue()==0`) without duplicating the scan itself. This isn't applied everywhere yet — the same approach could extend to more of the basic arithmetic helpers.
-
-Determinant calculation also uses a small factory: `matrixDet` needs a "zero" to accumulate the cofactor sum into, but a generic `RationalNumber` has no public zero-argument constructor. `RationalNumberFactory` (implemented by `FractionRationalNumberFactory`) supplies that value via `factory.zero()`. The same idea would work for `matrixMultiply`, but it's avoided there on purpose — the accumulator is initialized from the first term of the sum instead (`LeftMat[i][0].multiply(RightMat[0][j])`), which sidesteps needing a zero element at the cost of a slightly less uniform loop.
+`AbstractRationalNumber` centralizes the arithmetic every `RationalNumber` implementation shares, working purely on raw numerator/denominator pairs (`absAdd`, `absSubtract`, `absMultiply`, `absDivide`) so `FractionRationalNumber` and `MixedRationalNumber` inherit correctness instead of re-deriving it, cancelling shared factors via `GCD` before multiplying to keep intermediate values smaller.
 
 ## Project Structure
 
@@ -76,4 +72,7 @@ Determinant calculation also uses a small factory: `matrixDet` needs a "zero" to
 | `MixedRationalNumber.java` | Mixed-number implementation of `RationalNumber` |
 | `RationalNumberFactory.java` | Factory interface for producing a `RationalNumber` zero value |
 | `FractionRationalNumberFactory.java` | Factory producing a `FractionRationalNumber` zero |
+| `NumericOperations.java` | Strategy interface: `add`/`sub`/`mul`/`div`, `zero()`, `isZero()` for a type `T` |
+| `DoubleOperations.java` | `NumericOperations<Double>` singleton, backing the `T extends Number` overloads |
+| `RationalNumberOperations.java` | `NumericOperations<RationalNumber>` singleton, wraps a `RationalNumberFactory` |
 | `MatrixOperations.java` | Static utility class: multiplication, determinant, rank, row operations, helpers |
